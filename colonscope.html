@@ -4,11 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ColonScope Test</title>
+  <style>
+
+
+
+  </style>
 </head>
 <body>
   <textarea id="code" rows="4" cols="50"></textarea>
   <button id="submit">Run</button>
-  <p id="output"></p>
+  <div id="output"></p>
   <script>
   
 var d = {
@@ -22,60 +27,80 @@ var output = d.gid('output');
 
 var vars = {}
 
+function print(str,type = 'normal') {
+  let printedLine = d.ce('p');
+  printedLine.classList.add('log')
+  printedLine.classList.add(type);
+  printedLine.innerHTML = str
+  output.appendChild(printedLine);
+}
 
 function runCode(code) {
-  code.split('\n').forEach(line => {runLine(line)});
-}
-function runLine(line) {
-    if(line.startsWith('v:')) { // set a variable to a value
-      let value = line.split(':')[2].trim()
-      if (value[0] == value[value.length-1] && (value[0]=='"'||value[0]=="'"||value[0]=="`")) {
-        vars[line.split(':')[1].trim()] = value.slice(1,-1);
-      } else if (parseFloat(value)) {
-        vars[line.split(':')[1].trim()] = parseFloat(value)
-      } else if (vars[value]) {
-        vars[line.split(':')[1].trim()] = vars[value]
-      }
-    } else if (line.startsWith('p:')) { // print a variable
-      output.innerHTML += `${vars[line.split('p:')[1].trim()]}`
-    } else if (line.startsWith('m:')) { // set a variable to a calculation's result
-      if (vars[line.split(':')[1].trim()]) {
-        let equation = line.split(':')[2].trim()
-        let opers = 0;
-        let oper;
-        ['+','*','/','-'].forEach(item => {
-          if (line.includes(item)) {
-            opers++;
-            oper = item;
-          }
-        })
-        if (opers == 1) {
-          let num = [equation.split(oper)[0].trim(),equation.split(oper)[1].trim()]
-          num.forEach((number,i) => {
-            if (parseFloat(number)) {
-              num[i] = parseFloat(number)
-            } else if (vars[number]) {
-              num[i] = vars[number]
+  let ignoredLines = [];
+  code.split('\n').forEach((line,lineN) => {
+    if (!ignoredLines.includes(lineN)) {
+      line = line.trim()
+      console.log(`running line: ${line}`)
+      if(line.startsWith('v:')) { // set a variable to a value
+        let value = line.split(':').slice(2).join(':').trim()
+        if (typeof parseFloat(value) != undefined) {
+          vars[line.split(':')[1].trim()] = parseFloat(value)
+        } else if (value[0] == value[value.length-1] && (value[0]=='"'||value[0]=="'"||value[0]=="`") && value.length>1) {
+          vars[line.split(':')[1].trim()] = value.slice(1,-1);
+        } else if (vars[value]) {
+          vars[line.split(':')[1].trim()] = vars[value]
+        }
+      } else if (line.startsWith('p:')) { // print a variable
+        print(vars[line.split('p:')[1].trim()]);
+      } else if (line.startsWith('m:')) { // set a variable to a calculation's result
+        if (typeof vars[line.split(':')[1].trim()] != undefined) {
+          console.log('variable found')
+          let equation = line.split(':').slice(2).join(':').trim()
+          let opers = 0;
+          let oper;
+          ['+','*','/','-'].forEach(item => {
+            if (line.includes(item)) {
+              opers++;
+              oper = item;
             }
           })
-          console.log(num)
-          if (num[0] && num[1]) {
-            vars[line.split(':')[1].trim()] = oper=='+'?num[0]+num[1]:oper=='-'?num[0]-num[1]:oper=='*'?num[0]*num[1]:oper=='/'?num[0]/num[1]:num[0]
+          if (opers == 1) {
+            let num = [equation.split(oper)[0].trim(),equation.split(oper)[1].trim()]
+            num.forEach((number,i) => {
+              if (parseFloat(number)) {
+                num[i] = parseFloat(number)
+              } else if (typeof vars[number] != undefined) {
+                num[i] = vars[number]
+              }
+            })
+            if (typeof num[0] != undefined && typeof num[1] != undefined) {
+              vars[line.split(':')[1].trim()] = oper=='+'?num[0]+num[1]:oper=='-'?num[0]-num[1]:oper=='*'?num[0]*num[1]:oper=='/'?num[0]/num[1]:num[0]
+            }
+          }
+        }
+      } else if (line.startsWith('l:')) { // run one line of code repeatedly
+        if (parseInt(line.split(':')[1].trim())) {
+          console.log('valid loop')
+          let endFound = false;
+          let loopEnd = lineN;
+          while (!endFound) {
+            loopEnd++;
+            if (code.split('\n')[loopEnd].trim() == 'endl') {
+              endFound = true;
+            }
+            ignoredLines.push(loopEnd)
+          }
+          for (i=1;i<=parseInt(line.split(':')[1].trim());i++) {
+            runCode(code.split('\n').slice(lineN+1,loopEnd).join('\n').trim())
           }
         }
       }
-    } else if (line.startsWith('l:')) { // run one line of code repeatedly
-      console.log(parseInt(line.split(':')[1].trim()));
-      if (parseInt(line.split(':')[1].trim())) {
-        for (i=1;i<=parseInt(line.split(':')[1].trim();i++) {
-          runLine(line.split(':').slice(2).join('').trim())
-        }
-      }
-    }
+    } 
   });
 }
     
 submit.addEventListener('click',() => {
+  output.innerHTML = "";
   runCode(input.value);
 })
 
