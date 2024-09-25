@@ -22,9 +22,11 @@ var output = d.gid('output');
 
 var vars = {}
 
-submit.addEventListener('click',() => {
-  let code = input.value;
-  code.split('\n').forEach(line => {
+
+function runCode(code) {
+  code.split('\n').forEach(line => {runLine(line)});
+}
+function runLine(line) {
     if(line.startsWith('v:')) { // set a variable to a value
       let value = line.split(':')[2].trim()
       if (value[0] == value[value.length-1] && (value[0]=='"'||value[0]=="'"||value[0]=="`")) {
@@ -62,8 +64,18 @@ submit.addEventListener('click',() => {
           }
         }
       }
+    } else if (line.startsWith('l:')) { // run one line of code repeatedly
+      if (parseInt(line.split(':')[1].trim()) {
+        for (i=1;i<=parseInt(line.split(':')[1].trim();i++) {
+          runLine(line.split(':')[2].trim())
+        }
+      }
     }
   });
+}
+    
+submit.addEventListener('click',() => {
+  runCode(input.value);
 })
 
   </script>
