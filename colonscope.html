@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ColonScope Test</title>
+</head>
+<body>
+  <textarea id="code" rows="4" cols="50"></textarea>
+  <button id="submit">Run</button>
+  <p id="output"></p>
+  <script>
+  
+var d = {
+  gid:function(id){return document.getElementById(id)},
+  ce:function(id){return document.createElement(id)}
+}
+
+var input = d.gid('code');
+var submit = d.gid('submit');
+var output = d.gid('output');
+
+var vars = {}
+
+submit.addEventListener('click',() => {
+  let code = input.value;
+  code.split('\n').forEach(line => {
+    if(line.startsWith('v:')) { // set a variable to a value
+      let value = line.split(':')[2].trim()
+      if (value[0] == value[value.length-1] && (value[0]=='"'||value[0]=="'"||value[0]=="`")) {
+        vars[line.split(':')[1].trim()] = value.slice(1,-1);
+      } else if (parseFloat(value)) {
+        vars[line.split(':')[1].trim()] = parseFloat(value)
+      } else if (vars[value]) {
+        vars[line.split(':')[1].trim()] = vars[value]
+      }
+    } else if (line.startsWith('p:')) { // print a variable
+      output.innerHTML += `${vars[line.split('p:')[1].trim()]}`
+    } else if (line.startsWith('m:')) { // set a variable to a calculation's result
+      if (vars[line.split(':')[1].trim()]) {
+        let equation = line.split(':')[2].trim()
+        let opers = 0;
+        let oper;
+        ['+','*','/','-'].forEach(item => {
+          if (line.includes(item)) {
+            opers++;
+            oper = item;
+          }
+        })
+        if (opers == 1) {
+          let num = [equation.split(oper)[0].trim(),equation.split(oper)[1].trim()]
+          num.forEach((number,i) => {
+            if (parseFloat(number)) {
+              num[i] = parseFloat(number)
+            } else if (vars[number]) {
+              num[i] = vars[number]
+            }
+          })
+          console.log(num)
+          if (num[0] && num[1]) {
+            vars[line.split(':')[1].trim()] = oper=='+'?num[0]+num[1]:oper=='-'?num[0]-num[1]:oper=='*'?num[0]*num[1]:oper=='/'?num[0]/num[1]:num[0]
+          }
+        }
+      }
+    }
+  });
+})
+
+  </script>
+</body>
+</html>
