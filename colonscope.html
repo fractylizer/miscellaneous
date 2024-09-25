@@ -65,6 +65,7 @@ function runLine(line) {
         }
       }
     } else if (line.startsWith('l:')) { // run one line of code repeatedly
+      console.log(parseInt(line.split(':')[1].trim()));
       if (parseInt(line.split(':')[1].trim())) {
         for (i=1;i<=parseInt(line.split(':')[1].trim();i++) {
           runLine(line.split(':').slice(2).join('').trim())
