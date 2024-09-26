@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,14 +7,16 @@
   <title>ColonScope Test</title>
   <style>
 
-
+.log.error {
+    background-color:#fbb;
+}
 
   </style>
 </head>
 <body>
   <textarea id="code" rows="4" cols="50"></textarea>
   <button id="submit">Run</button>
-  <div id="output"></p>
+  <div id="output"></div>
   <script>
   
 var d = {
@@ -25,7 +28,8 @@ var input = d.gid('code');
 var submit = d.gid('submit');
 var output = d.gid('output');
 
-var vars = {}
+var vars = {};
+var funcs = {};
 
 function print(str,type = 'normal') {
   let printedLine = d.ce('p');
@@ -35,6 +39,25 @@ function print(str,type = 'normal') {
   output.appendChild(printedLine);
 }
 
+function printB(str,func,type = 'normal') {
+  let printedBtn = d.ce('button');
+  printedBtn.classList.add('log')
+  printedBtn.classList.add(type);
+  printedBtn.innerHTML = str
+  printedBtn.addEventListener('click',() => {
+    runFunction(func)
+  })
+  output.appendChild(printedBtn);
+}
+
+function clear() {output.innerHTML = ''}
+function runFunction(func) {
+  if (typeof funcs[func] != undefined) {
+    runCode(funcs[func])
+  } else {
+    print(`function "${func}" does not exist`,'error')
+  }
+}
 function runCode(code) {
   let ignoredLines = [];
   code.split('\n').forEach((line,lineN) => {
@@ -42,16 +65,19 @@ function runCode(code) {
       line = line.trim()
       console.log(`running line: ${line}`)
       if(line.startsWith('v:')) { // set a variable to a value
+        let varName = line.split(':')[1].trim();
         let value = line.split(':').slice(2).join(':').trim()
-        if (typeof parseFloat(value) != undefined) {
-          vars[line.split(':')[1].trim()] = parseFloat(value)
+        if (!isNaN(parseFloat(value))) {
+          vars[varName] = parseFloat(value)
         } else if (value[0] == value[value.length-1] && (value[0]=='"'||value[0]=="'"||value[0]=="`") && value.length>1) {
-          vars[line.split(':')[1].trim()] = value.slice(1,-1);
+          vars[varName] = value.slice(1,-1);
         } else if (vars[value]) {
-          vars[line.split(':')[1].trim()] = vars[value]
+          vars[varName] = vars[value]
         }
       } else if (line.startsWith('p:')) { // print a variable
         print(vars[line.split('p:')[1].trim()]);
+      } else if (line.startsWith('c:')) { // clear console
+        clear()
       } else if (line.startsWith('m:')) { // set a variable to a calculation's result
         if (typeof vars[line.split(':')[1].trim()] != undefined) {
           console.log('variable found')
@@ -67,7 +93,7 @@ function runCode(code) {
           if (opers == 1) {
             let num = [equation.split(oper)[0].trim(),equation.split(oper)[1].trim()]
             num.forEach((number,i) => {
-              if (parseFloat(number)) {
+              if (!isNaN(parseFloat(number))) {
                 num[i] = parseFloat(number)
               } else if (typeof vars[number] != undefined) {
                 num[i] = vars[number]
@@ -92,6 +118,73 @@ function runCode(code) {
           }
           for (i=1;i<=parseInt(line.split(':')[1].trim());i++) {
             runCode(code.split('\n').slice(lineN+1,loopEnd).join('\n').trim())
+          }
+        }
+      } else if (line.startsWith('f:')) { // declare or edit a subroutine
+        let funcName = line.split(':')[1].trim();
+        let endFound = false;
+        let funcEnd = lineN;
+        while (!endFound) {
+          funcEnd++;
+        if (code.split('\n')[funcEnd].trim() == 'endf') {
+            endFound = true;
+        }
+        ignoredLines.push(funcEnd)
+        }
+        funcs[funcName] = code.split('\n').slice(lineN+1,funcEnd).join('\n').trim()
+      } else if (line.startsWith('f-')) { // declare or edit a subroutine
+        let funcName = line.split(':')[0].split('-')[1].trim();
+        runFunction(funcName)
+      } else if (line.startsWith('b:')) { // print a button
+        if (typeof funcs[line.split(':')[2]] != undefined) {
+          printB(line.split(':')[1],line.split(':')[2])
+        }
+      } else if (line.startsWith('if:')) { // conditional statement
+        console.log('conditional reached:')
+        console.log(line.split(':')[1].trim())
+        let condition = line.split(':')[1].trim()
+        let opers = 0;
+        let oper;
+        ['<=','>='].forEach(item => {
+          if (line.includes(item)) {
+            opers++;
+            oper = item;
+          }
+        })
+        if (opers == 0) {
+          ['=','>','<'].forEach(item => {
+            if (line.includes(item)) {
+              opers++;
+              oper = item;
+            }
+          })
+        }
+        if (opers == 1) {
+          console.log(condition)
+          console.log(condition.split(oper))
+          let num = [condition.split(oper)[0].trim(),condition.split(oper)[1].trim()]
+          num.forEach((number,i) => {
+            if (!isNaN(parseFloat(number))) {
+              num[i] = parseFloat(number)
+            } else if (typeof vars[number] != undefined) {
+              num[i] = vars[number]
+            }
+          })
+          let result = false;
+          if (typeof num[0] != undefined && typeof num[1] != undefined) {
+            result = oper=='>'?num[0]>num[1]:oper=='='?num[0]==num[1]:oper=='<'?num[0]<num[1]:oper=='>='?num[0]>=num[1]:oper=='<='?num[0]<=num[1]:false
+          }
+          let endFound = false;
+          let ifEnd = lineN;
+          while (!endFound) {
+            ifEnd++;
+            if (code.split('\n')[ifEnd].trim() == 'endif') {
+              endFound = true;
+            }
+            ignoredLines.push(ifEnd)
+          }
+          if (result) {
+            runCode(code.split('\n').slice(lineN+1,ifEnd).join('\n').trim())
           }
         }
       }
