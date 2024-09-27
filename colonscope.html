@@ -104,7 +104,7 @@ function runCode(code) {
             }
           }
         }
-      } else if (line.startsWith('l:')) { // run one line of code repeatedly
+      } else if (line.startsWith('l:')) { // run a section of code repeatedly
         if (parseInt(line.split(':')[1].trim())) {
           console.log('valid loop')
           let endFound = false;
@@ -132,7 +132,7 @@ function runCode(code) {
         ignoredLines.push(funcEnd)
         }
         funcs[funcName] = code.split('\n').slice(lineN+1,funcEnd).join('\n').trim()
-      } else if (line.startsWith('f-')) { // declare or edit a subroutine
+      } else if (line.startsWith('f-')) { // run a subroutine
         let funcName = line.split(':')[0].split('-')[1].trim();
         runFunction(funcName)
       } else if (line.startsWith('b:')) { // print a button
@@ -175,16 +175,31 @@ function runCode(code) {
             result = oper=='>'?num[0]>num[1]:oper=='='?num[0]==num[1]:oper=='<'?num[0]<num[1]:oper=='>='?num[0]>=num[1]:oper=='<='?num[0]<=num[1]:false
           }
           let endFound = false;
+          let elseFound = false;
           let ifEnd = lineN;
+          let ifElse = lineN;
           while (!endFound) {
             ifEnd++;
+            if (!(endFound || elseFound)) {
+              ifElse++;
+              if (code.split('\n')[ifEnd].trim() == 'else:') {
+                elseFound = true;
+              }
+            }
             if (code.split('\n')[ifEnd].trim() == 'endif') {
               endFound = true;
             }
             ignoredLines.push(ifEnd)
           }
+          console.log(`else: ${elseFound},${ifElse}, end: ${endFound},${ifEnd}`)
           if (result) {
-            runCode(code.split('\n').slice(lineN+1,ifEnd).join('\n').trim())
+            if (elseFound) {
+              runCode(code.split('\n').slice(lineN+1,ifElse).join('\n').trim())
+            } else {
+              runCode(code.split('\n').slice(lineN+1,ifEnd).join('\n').trim())
+            }
+          } else if (elseFound) {
+            runCode(code.split('\n').slice(ifElse+1,ifEnd).join('\n').trim())
           }
         }
       }
@@ -193,7 +208,7 @@ function runCode(code) {
 }
     
 submit.addEventListener('click',() => {
-  output.innerHTML = "";
+  clear();
   runCode(input.value);
 })
 
