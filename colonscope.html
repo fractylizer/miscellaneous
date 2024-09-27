@@ -14,8 +14,10 @@
   </style>
 </head>
 <body>
-  <textarea id="code" rows="4" cols="50"></textarea>
-  <button id="submit">Run</button>
+  <textarea id="code" rows="4" cols="50"></textarea><br>
+  <button id="submit">Run this text</button><br>
+  <button id="submitfile">Run from file</button><span>  File URL:</span><input type="text" id="url">
+  
   <div id="output"></div>
   <script>
   
@@ -27,6 +29,8 @@ var d = {
 var input = d.gid('code');
 var submit = d.gid('submit');
 var output = d.gid('output');
+var submitfile = d.gid('submitfile');
+var inputfile = d.gid('url');
 
 var vars = {};
 var funcs = {};
@@ -58,6 +62,16 @@ function runFunction(func) {
     print(`function "${func}" does not exist`,'error')
   }
 }
+
+function runFile(url) {
+  fetch(url)
+    .then(function(response) {
+      response.text().then(function(text) {
+        runCode(text)
+      });
+    });
+}
+
 function runCode(code) {
   let ignoredLines = [];
   code.split('\n').forEach((line,lineN) => {
@@ -191,7 +205,6 @@ function runCode(code) {
             }
             ignoredLines.push(ifEnd)
           }
-          console.log(`else: ${elseFound},${ifElse}, end: ${endFound},${ifEnd}`)
           if (result) {
             if (elseFound) {
               runCode(code.split('\n').slice(lineN+1,ifElse).join('\n').trim())
@@ -210,6 +223,10 @@ function runCode(code) {
 submit.addEventListener('click',() => {
   clear();
   runCode(input.value);
+})  
+submitfile.addEventListener('click',() => {
+  clear();
+  runFile(inputfile.value);
 })
 
   </script>
