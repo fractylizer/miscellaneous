@@ -77,7 +77,7 @@ function runCode(code) {
   code.split('\n').forEach((line,lineN) => {
     if (!ignoredLines.includes(lineN)) {
       line = line.trim()
-      console.log(`running line: ${line}`)
+      console.log(`running line ${lineN}: ${line}`)
       if(line.startsWith('v:')) { // set a variable to a value
         let varName = line.split(':')[1].trim();
         let value = line.split(':').slice(2).join(':').trim()
@@ -123,10 +123,22 @@ function runCode(code) {
           console.log('valid loop')
           let endFound = false;
           let loopEnd = lineN;
+          //let loopLayers = 1;
           while (!endFound) {
+            //console.log(loopLayers)
+            //console.log(code.split('\n')[loopEnd].trim())
             loopEnd++;
+            //if (code.split('\n')[loopEnd].trim().startsWith('l:')) {
+              //console.log('found new loop start')
+              //loopLayers++;
+            //}
             if (code.split('\n')[loopEnd].trim() == 'endl') {
-              endFound = true;
+              console.log('end of loop found')
+              //if (loopLayers == 1) {
+                endFound = true;
+              //} else {
+                //loopLayers--;
+              //}
             }
             ignoredLines.push(loopEnd)
           }
@@ -138,12 +150,20 @@ function runCode(code) {
         let funcName = line.split(':')[1].trim();
         let endFound = false;
         let funcEnd = lineN;
+        let funcLayers = 1;
         while (!endFound) {
           funcEnd++;
-        if (code.split('\n')[funcEnd].trim() == 'endf') {
-            endFound = true;
-        }
-        ignoredLines.push(funcEnd)
+          if (code.split('\n')[funcEnd].trim().startsWith('f:')) {
+            funcLayers++;
+          }
+          if (code.split('\n')[funcEnd].trim() == 'endf') {
+            if (funcLayers == 1) {
+              endFound = true;
+            } else {
+              funcLayers--;
+            }
+          }
+          ignoredLines.push(funcEnd)
         }
         funcs[funcName] = code.split('\n').slice(lineN+1,funcEnd).join('\n').trim()
       } else if (line.startsWith('f-')) { // run a subroutine
@@ -154,9 +174,8 @@ function runCode(code) {
           printB(line.split(':')[1],line.split(':')[2])
         }
       } else if (line.startsWith('if:')) { // conditional statement
-        console.log('conditional reached:')
-        console.log(line.split(':')[1].trim())
         let condition = line.split(':')[1].trim()
+        console.log(`conditional: ${condition}`)
         let opers = 0;
         let oper;
         ['<=','>='].forEach(item => {
@@ -192,19 +211,29 @@ function runCode(code) {
           let elseFound = false;
           let ifEnd = lineN;
           let ifElse = lineN;
+          let ifLayers = 1;
           while (!endFound) {
             ifEnd++;
-            if (!(endFound || elseFound)) {
-              ifElse++;
-              if (code.split('\n')[ifEnd].trim() == 'else:') {
-                elseFound = true;
+            if (code.split('\n')[ifEnd].trim().startsWith('if:')) {
+              ifLayers++;
+            } else {
+              if (!(endFound || elseFound)) {
+                ifElse++;
+                if (code.split('\n')[ifEnd].trim() == 'else:') {
+                  elseFound = true;
+                }
               }
             }
             if (code.split('\n')[ifEnd].trim() == 'endif') {
-              endFound = true;
+              if (ifLayers>1) {
+                ifLayers--;
+              } else {
+                endFound = true;
+              }
             }
             ignoredLines.push(ifEnd)
           }
+          console.log(`start: ${lineN}, else: ${ifElse}, end: ${ifEnd}`)
           if (result) {
             if (elseFound) {
               runCode(code.split('\n').slice(lineN+1,ifElse).join('\n').trim())
